@@ -1,0 +1,50 @@
+service: casestudy
+
+custom:
+  settings:
+    #Please enter your accountid
+    ACCOUNT_ID: "861077500827"
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: ap-southeast-1
+  environment: ${self:custom.settings}
+  
+  #Permission to send message to the queue
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "sqs:SendMessage"
+        - "sqs:GetQueueUrl"
+      Resource: "arn:aws:sqs:${self:provider.region}:*:MyQueue"
+    - Effect: "Allow"
+      Action:
+        - "sqs:ListQueues"
+      Resource: "arn:aws:sqs:${self:provider.region}:861077500827:*"
+
+functions:
+  hello:
+    handler: handler.hello
+    events:
+      - http:
+          method: get
+          path: hello
+          
+  #triggers whenever there is a message in the queue
+  sqsHello:
+    handler: handler.sqsHello
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - MyQueue
+              - Arn
+          batchSize: 1 
+
+resources:
+  Resources:
+    MyQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: "MyQueue"
